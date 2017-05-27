@@ -145,9 +145,6 @@ TwoDIntVector* generateNeighbours(TwoDIntVector solution) {
 
 	neighbour[oldRoom][oldTimeSlot] = -1;
 	neighbour[room][timeslot] = event;
-	// TODO: Remove this.
-	cout << "Swapped event " << event << " from " << oldRoom << "," << oldTimeSlot << " to " << room << "," << timeslot << endl;
-	printMatrix(neighbour, numRooms, NUMBEROFSLOTS);
 
 	TwoDIntVector* neighbours = new TwoDIntVector[1];
 	return neighbours;
