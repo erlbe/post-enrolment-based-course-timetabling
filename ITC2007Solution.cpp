@@ -3,7 +3,7 @@
 //	Arrays and variables used throughout the program
 int numEvents, numRooms, numFeatures, numStudents, NUMBEROFPLACES;
 int *roomSize, *eventSize;
-int **before;
+int **before, **currentEventPlace;
 bool **attends, **roomFeatures, **eventFeatures, **eventAvail, **roomAvail, **event_conflict;
 
 int main(int argc, char**argv)
@@ -29,9 +29,9 @@ int main(int argc, char**argv)
 	TwoDIntVector theSolution;
 	theSolution = createRandomSolution();
 	printMatrix(theSolution, numRooms, NUMBEROFSLOTS);
-	cout << "The evaluation of the random solution is: " << evaluateSolution(theSolution);
-	
+	cout << "The evaluation of the random solution is: " << evaluateSolution(theSolution) << endl;
 
+	generateNeighbours(theSolution);
 	// Create the file to be checked by the official solution validator
 	outputSlnAnswerFile(theSolution, slnFileName);
     return 0;
@@ -110,12 +110,45 @@ TwoDIntVector createRandomSolution() {
 		}
 		theSolution[room][timeslot] = event;
 	}
-
+	makeCurrentEventPlaceMatrix(theSolution);
 	return theSolution;
 }
 
 TwoDIntVector* generateNeighbours(TwoDIntVector solution) {
-	// TODO: This
+	// TrE: translate an event to a free position of the timetable
+	int event = rand() % numEvents;
+	int room = rand() % numRooms;
+	int timeslot = rand() % NUMBEROFSLOTS;
+	bool foundEmptyPosition = false;
+
+	// Iterate through the solution looking for free rooms from a random timeslot in a random room
+	while (!foundEmptyPosition) {
+		timeslot++;
+		if (timeslot >= NUMBEROFSLOTS) {
+			timeslot = 0;
+			room++;
+			if (room >= numRooms) {
+				room = 0;
+			}
+		}
+		if (solution[room][timeslot] == -1) {
+			foundEmptyPosition = true;
+		}
+	}
+	// Copy the solution
+	TwoDIntVector neighbour = solution;
+	
+	// Make the move
+	int* oldPlace = getEventPlace(event);
+	int oldRoom = oldPlace[0];
+	int oldTimeSlot = oldPlace[1];
+
+	neighbour[oldRoom][oldTimeSlot] = -1;
+	neighbour[room][timeslot] = event;
+	// TODO: Remove this.
+	cout << "Swapped event " << event << " from " << oldRoom << "," << oldTimeSlot << " to " << room << "," << timeslot << endl;
+	printMatrix(neighbour, numRooms, NUMBEROFSLOTS);
+
 	TwoDIntVector* neighbours = new TwoDIntVector[1];
 	return neighbours;
 }
@@ -206,6 +239,28 @@ int evaluateSolution(TwoDIntVector solution) {
 //---------------------------------------------------------------------------------------
 //                             HELP FUNCTIONS
 //---------------------------------------------------------------------------------------
+
+// Makes a matrix with the room and timeslot of each event.
+// Should be ran everytime changes are made to the solution
+void makeCurrentEventPlaceMatrix(TwoDIntVector solution) {
+	int r, c, i;
+	currentEventPlace = new int*[numEvents];
+	for (i = 0; i <numEvents; i++)currentEventPlace[i] = new int[2];
+	for (r = 0; r < numRooms; r++) {
+		for (c = 0; c < NUMBEROFSLOTS; c++) {
+			int event = solution[r][c];
+			if (event != -1) {
+				currentEventPlace[event][0] = r;
+				currentEventPlace[event][1] = c;
+			}
+		}
+	}
+}
+
+// Returns room[0] and timeslot[1]
+int* getEventPlace(int event) {
+	return currentEventPlace[event];
+}
 
 // Help function to visualize arrays
 void printArray(int* array, int size) {

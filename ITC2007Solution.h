@@ -27,6 +27,8 @@ void readInputFile(ifstream& inStream);
 void outputSlnAnswerFile(TwoDIntVector&, char*);
 int evaluateSolution(TwoDIntVector);
 TwoDIntVector* generateNeighbours(TwoDIntVector);
+void makeCurrentEventPlaceMatrix(TwoDIntVector);
+int* getEventPlace(int event);
 
 TwoDIntVector createRandomSolution();
 
