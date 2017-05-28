@@ -28,6 +28,9 @@ int evaluateSolution(TwoDIntVector);
 TwoDIntVector* generateNeighbours(TwoDIntVector);
 TwoDIntVector generateTranslateEventToFreePosition(TwoDIntVector);
 TwoDIntVector generateSwapTwoEvents(TwoDIntVector);
+TwoDIntVector generateMatchingNeighbour(TwoDIntVector);
+int selectEventWithFewestSuitableRooms(int timeslot, int* numRoomsThatCanHaveEvs, int*);
+int selectRoomWithFewestSuitableEvents(int selectedEvent, int* numEvsThatCanGoInRoom, int*);
 void makeCurrentEventPlaceMatrix(TwoDIntVector);
 int* getEventPlace(int event);
 

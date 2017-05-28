@@ -21,9 +21,6 @@ int main(int argc, char**argv)
 		readInputFile(inStream);
 		inStream.close();
 	}
-	//TODO: Remove
-	int* numEvsThatCanGoInRoom = new int[numRooms];
-	printArray(numEvsThatCanGoInRoom, numRooms);
 
 	// Seed the random function
 	srand(time(NULL));
@@ -37,13 +34,14 @@ int main(int argc, char**argv)
 
 	while (bestEvaluation > 1000) {
 		TwoDIntVector* neighbours = generateNeighbours(theSolution);
-		for (int i = 0; i < 2; i++)
+		for (int i = 0; i < 3; i++)
 		{
 			TwoDIntVector currentNeighbour = neighbours[i];
 			int neighbourEvaluation = evaluateSolution(currentNeighbour);
 			if (neighbourEvaluation <= bestEvaluation) {
 				bestEvaluation = neighbourEvaluation;
 				theSolution = currentNeighbour;
+				makeCurrentEventPlaceMatrix(theSolution);
 				cout << "The evaluation of the current solution is: " << bestEvaluation << endl;
 			}
 		}
@@ -107,10 +105,12 @@ TwoDIntVector createRandomSolution() {
 TwoDIntVector* generateNeighbours(TwoDIntVector solution) {
 	TwoDIntVector neighbour1 = generateTranslateEventToFreePosition(solution);
 	TwoDIntVector neighbour2 = generateSwapTwoEvents(solution);
+	TwoDIntVector neighbour3 = generateMatchingNeighbour(solution);
 
-	TwoDIntVector* neighbours = new TwoDIntVector[2];
+	TwoDIntVector* neighbours = new TwoDIntVector[3];
 	neighbours[0] = neighbour1;
 	neighbours[1] = neighbour2;
+	neighbours[2] = neighbour3;
 	return neighbours;
 }
 
@@ -180,20 +180,133 @@ TwoDIntVector generateMatchingNeighbour(TwoDIntVector solution) {
 	
 	//Make an array signifying how many of the events can go in each room
 	int* numEvsThatCanGoInRoom = new int[numRooms];
+
+	// And an array signifying how many of the rooms each event can go into
+	int* numRoomsThatCanHaveEvs = new int[numRooms];
+
 	for (int room = 0; room<numRooms; room++) {
-		int count = 0;
+		int numEventsCount = 0;
+		int numRoomCount = 0;
+
+		int eventEvent = solution[room][timeslot];
 		for (int i = 0; i < numRooms; i++)
 		{
-			int event = solution[i][timeslot];
-			if (eventRoom[event][room]) {
-				count++;
+			int roomEvent = solution[i][timeslot];
+			if (roomEvent != -1) {
+				if (eventRoom[roomEvent][room]) {
+					numEventsCount++;
+				}
+			}
+			if (eventEvent != -1) {
+				if (eventRoom[eventEvent][i]) {
+					numRoomCount++;
+				}
 			}
 		}
-		numEvsThatCanGoInRoom[room] = count;
+		numEvsThatCanGoInRoom[room] = numEventsCount;
+		numRoomsThatCanHaveEvs[room] = numRoomCount;
 	}
 
-	//TODO return neighbour instead.
-	return solution;
+	TwoDIntVector partialSolution = solution;
+	int* unplacedEventsInTimeslot = new int[numRooms];
+	int* unDesignatedRoomsInTimeslot = new int[numRooms];
+	int numberOfUnplacedEventsInTimeslot = 0;
+	// Make all rooms in the certain timeslot clear. We are going to give the events in this timeslot new rooms
+	for (int room = 0; room < numRooms; room++)
+	{
+		int event = solution[room][timeslot];
+		unplacedEventsInTimeslot[room] = event;
+		unDesignatedRoomsInTimeslot[room] = room;
+		partialSolution[room][timeslot] = -1;
+		if (event != -1) {
+			numberOfUnplacedEventsInTimeslot++;
+		}
+	}
+
+	while (numberOfUnplacedEventsInTimeslot > 0) {
+		//We start with the event that has fewest rooms that it it can go into.
+		int selectedEvent = selectEventWithFewestSuitableRooms(timeslot, numRoomsThatCanHaveEvs, unplacedEventsInTimeslot);
+
+		// Chose the suited room which has the fewest other events that can go there.
+		int selectedRoom = selectRoomWithFewestSuitableEvents(selectedEvent, numEvsThatCanGoInRoom, unDesignatedRoomsInTimeslot);
+
+		// Place the selected event in the selected room
+		partialSolution[selectedRoom][timeslot] = selectedEvent;
+		// Decrease number of unplaced events
+		numberOfUnplacedEventsInTimeslot--;
+
+		int oldEventRoom = getEventPlace(selectedEvent)[0];
+		// Update the array with unplaced events
+		unplacedEventsInTimeslot[oldEventRoom] = -1;
+		unDesignatedRoomsInTimeslot[selectedRoom] = -1;
+	}
+	
+	return partialSolution;
+}
+
+int selectEventWithFewestSuitableRooms(int timeslot, int* numRoomsThatCanHaveEvs, int* unplacedEventsInTimeslot) {
+	int minValue = numRooms + 1;
+	IntVector minList;
+	for (int i = 0; i < numRooms; i++)
+	{
+		int event = unplacedEventsInTimeslot[i];
+		if (event != -1) {
+			int numberOfRooms = numRoomsThatCanHaveEvs[i];
+			// If it has the fewest rooms who works
+			if (numberOfRooms < minValue) {
+				minList.clear();
+				minList.push_back(event);
+				minValue = numberOfRooms;
+			}
+			// If it has as many as the current fewest rooms
+			else if (numberOfRooms == minValue) {
+				minList.push_back(event);
+			}
+		}
+		
+	}
+	int r = rand() % minList.size();
+	return minList[r];
+}
+
+int selectRoomWithFewestSuitableEvents(int selectedEvent, int* numEvsThatCanGoInRoom, int* unDesignatedRoomsInTimeslot) {
+	// Get a list of the rooms that suit this events needs
+	bool* suitedRooms = eventRoom[selectedEvent];
+
+	int minValue = numRooms + 1;
+	IntVector minList;
+	for (int room = 0; room < numRooms; room++)
+	{
+		// If this room is suited and that it hasn't already been assigned
+		if (suitedRooms[room] && unDesignatedRoomsInTimeslot[room] != -1) {
+			int numberOfEvents = numEvsThatCanGoInRoom[room];
+			// If it has the fewest events who works
+			if (numberOfEvents < minValue) {
+				minList.clear();
+				minList.push_back(room);
+				minValue = numberOfEvents;
+			}
+			// If it has as many as the current fewest events
+			else if (numberOfEvents == minValue) {
+				minList.push_back(room);
+			}
+		}
+	}
+	// If there are no suitable, untaken rooms. Put event in a random room. I.e the first available one.
+	if (minList.size() == 0) {
+		for (int room = 0; room < numRooms; room++)
+		{
+			if (unDesignatedRoomsInTimeslot[room] != -1) {
+				return room;
+			}
+		}
+	}
+	else {
+		int r = rand() % minList.size();
+			return minList[r];
+	}
+
+	
 }
 
 int evaluateSolution(TwoDIntVector solution) {
