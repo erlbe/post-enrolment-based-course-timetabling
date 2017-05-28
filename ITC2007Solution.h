@@ -23,10 +23,11 @@ typedef std::vector<int> IntVector;
 typedef std::vector<IntVector> TwoDIntVector;
 
 //Forward declaration
-void readInputFile(ifstream& inStream);
 void outputSlnAnswerFile(TwoDIntVector&, char*);
 int evaluateSolution(TwoDIntVector);
 TwoDIntVector* generateNeighbours(TwoDIntVector);
+TwoDIntVector generateTranslateEventToFreePosition(TwoDIntVector);
+TwoDIntVector generateSwapTwoEvents(TwoDIntVector);
 void makeCurrentEventPlaceMatrix(TwoDIntVector);
 int* getEventPlace(int event);
 
@@ -41,8 +42,8 @@ void printMatrix(TwoDIntVector matrix, int rows, int cols);
 //	Arrays and variables used throughout the program
 extern int numEvents, numRooms, numFeatures, numStudents, NUMBEROFPLACES;
 extern int *roomSize, *eventSize;
-extern int **before;
-extern bool **attends, **roomFeatures, **eventFeatures, **eventAvail, **roomAvail, **event_conflict;
+extern int **before, **currentEventPlace;
+extern bool **attends, **roomFeatures, **eventFeatures, **eventAvail, **roomAvail, **event_conflict, **eventRoom;
 
 #include "InputReader.h"
 

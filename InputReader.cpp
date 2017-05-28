@@ -1,4 +1,34 @@
 #include "InputReader.h"
+
+void readInputFile(ifstream& inStream)
+{
+	//Read in the first line of the tim file
+	inStream >> numEvents >> numRooms >> numFeatures >> numStudents;
+
+	// Read the stuff from the files to do with rooms
+	roomSize = makeRoomSizeArray(inStream);
+	attends = makeAttendsMatrix(inStream);
+	roomFeatures = makeRoomFeaturesMatrix(inStream);
+	eventFeatures = makeEventFeaturesMatrix(inStream);
+	eventAvail = makeEventAvail(inStream);
+
+	NUMBEROFPLACES = numRooms*NUMBEROFSLOTS;
+
+	// Make all true
+	roomAvail = makeRoomAvail();
+
+	// Finally, read in the precidence constraints and make before matrix;
+	before = makeBeforeMatrix(inStream);
+
+	// Create confilct_event matrix with events that have one or more students that take another event 
+	event_conflict = makeEventConflictMatrix();
+
+	// Create eventSize matrix to decide the number of students attending each event. Used to make sure the rooms are big enough.
+	eventSize = makeEventSizeMatrix();
+
+	// Create eventRoom matrix which says if the room is suitable for a given event.
+	eventRoom = makeEventRoomMatrix();
+}
 //---------------------------------------------------------------------------------------
 //                             READ INPUT FUNCTIONS
 //---------------------------------------------------------------------------------------
@@ -133,4 +163,56 @@ int* makeEventSizeMatrix() {
 		eventSize[c] = total;
 	}
 	return eventSize;
+}
+bool** makeEventRoomMatrix()
+{
+	int i, r, c;
+	bool** eventRoom = new bool*[numEvents];
+	for (i = 0; i < numEvents; i++) eventRoom[i] = new bool[numRooms];
+	//We step through each cell in turn in the matrix and we check to see
+	//that if event r demands it, room c supplies it.
+	for (r = 0; r < numEvents; r++) {
+		for (c = 0; c < numRooms; c++) {
+			int count = 0;
+			int suitable = 1;
+			while ((count < numFeatures) && (suitable == 1)) {
+				if (eventFeatures[r][count] == 0) {
+					//event r doesnt require the feature - we dont care
+					count++;
+				}
+				else {
+					//The event	must have a requirement
+					if (roomFeatures[c][count] == 1) {
+						//But its OK because room c supplies it
+						count++;
+					}
+					else {
+						//The room doesnt satisfy the requirement
+						suitable = 0;
+					}
+				}
+			}
+			if (suitable == 1)	eventRoom[r][c] = true;
+			else eventRoom[r][c] = false;
+		}
+	}
+
+	//Now we modify the event room matrix using event_size array
+	for (r = 0; r < numEvents; r++) {
+		for (c = 0; c < numRooms; c++) {
+			if (eventSize[r] > roomSize[c]) eventRoom[r][c] = false;
+		}
+	}
+
+	/* From the PARTIALCOL alg.
+	//For each event, calculate a list of the rooms it can go in.
+	for (r = 0; r<numEvents; r++) {
+		IntVector newIV;
+		feasRooms.push_back(newIV);
+		for (c = 0; c<numRooms; c++) {
+			if (eventRoom[r][c]) feasRooms[r].push_back(c);
+		}
+	}
+	*/
+	return eventRoom;
 }

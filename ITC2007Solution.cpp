@@ -4,7 +4,7 @@
 int numEvents, numRooms, numFeatures, numStudents, NUMBEROFPLACES;
 int *roomSize, *eventSize;
 int **before, **currentEventPlace;
-bool **attends, **roomFeatures, **eventFeatures, **eventAvail, **roomAvail, **event_conflict;
+bool **attends, **roomFeatures, **eventFeatures, **eventAvail, **roomAvail, **event_conflict, **eventRoom;
 
 int main(int argc, char**argv)
 {
@@ -21,6 +21,9 @@ int main(int argc, char**argv)
 		readInputFile(inStream);
 		inStream.close();
 	}
+	//TODO: Remove
+	int* numEvsThatCanGoInRoom = new int[numRooms];
+	printArray(numEvsThatCanGoInRoom, numRooms);
 
 	// Seed the random function
 	srand(time(NULL));
@@ -29,39 +32,26 @@ int main(int argc, char**argv)
 	TwoDIntVector theSolution;
 	theSolution = createRandomSolution();
 	printMatrix(theSolution, numRooms, NUMBEROFSLOTS);
-	cout << "The evaluation of the random solution is: " << evaluateSolution(theSolution) << endl;
+	int bestEvaluation = evaluateSolution(theSolution);
+	cout << "The evaluation of the random solution is: " << bestEvaluation << endl;
 
-	generateNeighbours(theSolution);
+	while (bestEvaluation > 1000) {
+		TwoDIntVector* neighbours = generateNeighbours(theSolution);
+		for (int i = 0; i < 2; i++)
+		{
+			TwoDIntVector currentNeighbour = neighbours[i];
+			int neighbourEvaluation = evaluateSolution(currentNeighbour);
+			if (neighbourEvaluation <= bestEvaluation) {
+				bestEvaluation = neighbourEvaluation;
+				theSolution = currentNeighbour;
+				cout << "The evaluation of the current solution is: " << bestEvaluation << endl;
+			}
+		}
+	}
+	cout << "The evaluation of the current solution is: " << bestEvaluation << endl;
 	// Create the file to be checked by the official solution validator
 	outputSlnAnswerFile(theSolution, slnFileName);
     return 0;
-}
-
-void readInputFile(ifstream& inStream)
-{
-	//Read in the first line of the tim file
-	inStream >> numEvents >> numRooms >> numFeatures >> numStudents;
-	
-	// Read the stuff from the files to do with rooms
-	roomSize = makeRoomSizeArray(inStream);
-	attends = makeAttendsMatrix(inStream);
-	roomFeatures = makeRoomFeaturesMatrix(inStream);
-	eventFeatures = makeEventFeaturesMatrix(inStream);
-	eventAvail = makeEventAvail(inStream);
-
-	NUMBEROFPLACES = numRooms*NUMBEROFSLOTS;
-
-	// Make all true
-	roomAvail = makeRoomAvail();
-
-	// Finally, read in the precidence constraints and make before matrix;
-	before = makeBeforeMatrix(inStream);
-
-	// Create confilct_event matrix with events that have one or more students that take another event 
-	event_conflict = makeEventConflictMatrix();
-
-	// Create eventSize matrix to decide the number of students attending each event. Used to make sure the rooms are big enough.
-	eventSize = makeEventSizeMatrix();
 }
 
 
@@ -115,7 +105,17 @@ TwoDIntVector createRandomSolution() {
 }
 
 TwoDIntVector* generateNeighbours(TwoDIntVector solution) {
-	// TrE: translate an event to a free position of the timetable
+	TwoDIntVector neighbour1 = generateTranslateEventToFreePosition(solution);
+	TwoDIntVector neighbour2 = generateSwapTwoEvents(solution);
+
+	TwoDIntVector* neighbours = new TwoDIntVector[2];
+	neighbours[0] = neighbour1;
+	neighbours[1] = neighbour2;
+	return neighbours;
+}
+
+// TrE: translate a random event to a free position of the timetable
+TwoDIntVector generateTranslateEventToFreePosition(TwoDIntVector solution) {
 	int event = rand() % numEvents;
 	int room = rand() % numRooms;
 	int timeslot = rand() % NUMBEROFSLOTS;
@@ -137,7 +137,7 @@ TwoDIntVector* generateNeighbours(TwoDIntVector solution) {
 	}
 	// Copy the solution
 	TwoDIntVector neighbour = solution;
-	
+
 	// Make the move
 	int* oldPlace = getEventPlace(event);
 	int oldRoom = oldPlace[0];
@@ -145,9 +145,55 @@ TwoDIntVector* generateNeighbours(TwoDIntVector solution) {
 
 	neighbour[oldRoom][oldTimeSlot] = -1;
 	neighbour[room][timeslot] = event;
+	return neighbour;
+}
 
-	TwoDIntVector* neighbours = new TwoDIntVector[1];
-	return neighbours;
+// SwE: swaps two events by interchanging their position in the timetable
+TwoDIntVector generateSwapTwoEvents(TwoDIntVector solution) {
+	bool distinctEvents = false;
+	int event1, event2;
+	// Generate two random events
+	while (!distinctEvents) {
+		event1 = rand() % numEvents;
+		event2 = rand() % numEvents;
+		if (event1 != event2) {
+			distinctEvents = true;
+		}
+	}
+	// Get their rooms and timeslots
+	int* placeEvent1 = getEventPlace(event1);
+	int* placeEvent2 = getEventPlace(event2);
+	
+	TwoDIntVector neighbour = solution;
+
+	// Swap their positions
+	neighbour[placeEvent1[0]][placeEvent1[1]] = event2;
+	neighbour[placeEvent2[0]][placeEvent2[1]] = event1;
+	return neighbour;
+}
+
+// Ma (Matching): reassigns the events within a given timeslot to minimise the number
+// of events assigned to an unsuitable room; to allow violations, a maximum
+// matching is solved. Events left unassigned in the matching are put into arbitrary rooms.
+TwoDIntVector generateMatchingNeighbour(TwoDIntVector solution) {
+	int timeslot = rand() % NUMBEROFSLOTS;
+	
+	//Make an array signifying how many of the events can go in each room
+	int* numEvsThatCanGoInRoom = new int[numRooms];
+	for (int room = 0; room<numRooms; room++) {
+		int count = 0;
+		for (int i = 0; i < numRooms; i++)
+		{
+			int event = solution[i][timeslot];
+			if (eventRoom[event][room]) {
+				count++;
+			}
+		}
+		numEvsThatCanGoInRoom[room] = count;
+	}
+
+	//TODO return neighbour instead.
+	return solution;
 }
 
 int evaluateSolution(TwoDIntVector solution) {
@@ -180,20 +226,13 @@ int evaluateSolution(TwoDIntVector solution) {
 
 				// HARD CONSTRAINT 2) the room is big enough for all the attending students and satisfies all the features required by the event;
 				//Check if room satisfies the event feature
-
-				// The features of the event
-				bool* currentEventFeatures = eventFeatures[event];
-
-				for (int feature = 0; feature < numFeatures; feature++) {
+				if (eventRoom[event][room] == false) {
 					// If a room has a required feature and the room doesn't have that feature it is unsuited
-					if (currentEventFeatures[feature] && !currentRoomFeatures[feature]) {
-						totalCost++;
-					}
 					// If a room is too small for the size (number of people attending) of an event
-					if (roomSize[room] < eventSize[event]) {
-						totalCost++;
-					}
+					// The eventRoom matrix has stored both of this information. 
+					totalCost++;
 				}
+				
 				// HARD CONSTRAINT 3) only one event is put into each room in any timeslot;
 				// This one is impossible to violate given how the solution is represented
 
