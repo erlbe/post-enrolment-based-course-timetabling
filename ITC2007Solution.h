@@ -37,6 +37,7 @@ int* getEventPlace(int event);
 TwoDIntVector createRandomSolution();
 
 void printArray(int* array, int size);
+void printArray(bool* array, int size);
 void printMatrix(int** matrix, int height, int width);
 void printMatrix(bool** matrix, int height, int width);
 void printMatrix(TwoDIntVector matrix, int rows, int cols);

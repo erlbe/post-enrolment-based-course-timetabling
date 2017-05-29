@@ -32,7 +32,7 @@ int main(int argc, char**argv)
 	int bestEvaluation = evaluateSolution(theSolution);
 	cout << "The evaluation of the random solution is: " << bestEvaluation << endl;
 
-	while (bestEvaluation > 1000) {
+	while (bestEvaluation > 20) {
 		TwoDIntVector* neighbours = generateNeighbours(theSolution);
 		for (int i = 0; i < 3; i++)
 		{
@@ -47,6 +47,7 @@ int main(int argc, char**argv)
 		}
 	}
 	cout << "The evaluation of the current solution is: " << bestEvaluation << endl;
+	printMatrix(theSolution, numRooms, NUMBEROFSLOTS);
 	// Create the file to be checked by the official solution validator
 	outputSlnAnswerFile(theSolution, slnFileName);
     return 0;
@@ -245,6 +246,7 @@ TwoDIntVector generateMatchingNeighbour(TwoDIntVector solution) {
 }
 
 int selectEventWithFewestSuitableRooms(int timeslot, int* numRoomsThatCanHaveEvs, int* unplacedEventsInTimeslot) {
+	
 	int minValue = numRooms + 1;
 	IntVector minList;
 	for (int i = 0; i < numRooms; i++)
@@ -263,7 +265,6 @@ int selectEventWithFewestSuitableRooms(int timeslot, int* numRoomsThatCanHaveEvs
 				minList.push_back(event);
 			}
 		}
-		
 	}
 	int r = rand() % minList.size();
 	return minList[r];
@@ -309,6 +310,7 @@ int selectRoomWithFewestSuitableEvents(int selectedEvent, int* numEvsThatCanGoIn
 	
 }
 
+
 int evaluateSolution(TwoDIntVector solution) {
 	int totalCost = 0;
 
@@ -323,6 +325,7 @@ int evaluateSolution(TwoDIntVector solution) {
 			int event = solution[room][timeslot];
 			// If the timeslot has an event scheduled
 			if (event != -1) {
+				/*
 				// HARD CONSTRAINT 1) no student attends more than one event at the same time;
 				// Check if the event has conflict with another event in the same timeslot in another room
 				for (int otherRoom = 0; otherRoom < numRooms; otherRoom++)
@@ -336,6 +339,8 @@ int evaluateSolution(TwoDIntVector solution) {
 						}
 					}
 				}
+				*/
+				
 
 				// HARD CONSTRAINT 2) the room is big enough for all the attending students and satisfies all the features required by the event;
 				//Check if room satisfies the event feature
@@ -345,7 +350,7 @@ int evaluateSolution(TwoDIntVector solution) {
 					// The eventRoom matrix has stored both of this information. 
 					totalCost++;
 				}
-				
+				/*
 				// HARD CONSTRAINT 3) only one event is put into each room in any timeslot;
 				// This one is impossible to violate given how the solution is represented
 
@@ -379,6 +384,8 @@ int evaluateSolution(TwoDIntVector solution) {
 						}
 					}
 				}
+				*/
+				
 			}
 		}
 	}
@@ -413,6 +420,13 @@ int* getEventPlace(int event) {
 
 // Help function to visualize arrays
 void printArray(int* array, int size) {
+	for (int i = 0; i < size; i++)
+	{
+		cout << array[i] << endl;
+	}
+}
+// Help function to visualize arrays
+void printArray(bool* array, int size) {
 	for (int i = 0; i < size; i++)
 	{
 		cout << array[i] << endl;
