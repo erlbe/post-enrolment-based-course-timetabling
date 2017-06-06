@@ -5,6 +5,7 @@ int numEvents, numRooms, numFeatures, numStudents, NUMBEROFPLACES;
 int *roomSize, *eventSize, *numSuitableRooms, *numSuitableEvents;
 int **before, **currentEventPlace;
 bool **attends, **roomFeatures, **eventFeatures, **eventAvail, **roomAvail, **event_conflict, **eventRoom;
+IntVector unplacedEvents;
 
 int main(int argc, char**argv)
 {
@@ -35,7 +36,7 @@ int main(int argc, char**argv)
 
 	while (bestEvaluation > 20) {
 		TwoDIntVector* neighbours = generateNeighbours(theSolution);
-		for (int i = 0; i < 3; i++)
+		for (int i = 0; i < 5; i++)
 		{
 			TwoDIntVector currentNeighbour = neighbours[i];
 			int neighbourEvaluation = evaluateSolution(currentNeighbour);
@@ -59,6 +60,7 @@ int main(int argc, char**argv)
 //                             ALGORITHM FUNCTIONS
 //---------------------------------------------------------------------------------------
 
+// THIS METHOD IS NOT USED. TOO BAD...
 TwoDIntVector createRandomSolution() {
 	// PARTIALCOL2012 eller 2008 sier at random er vel så bra som noe greedy.
 
@@ -130,9 +132,6 @@ TwoDIntVector generateFirstSolution() {
 	}
 
 	int numEventsToBePlaced = numEvents;
-
-	IntVector unplacedEvents;
-	unplacedEvents.clear();
 
 	while (numEventsToBePlaced > 0) {
 		int event = selectEvent(numRoomsForEvent);
@@ -245,22 +244,35 @@ int selectRoom(int event, int* numEventsForRoom, TwoDIntVector availableTimeslot
 }
 
 TwoDIntVector* generateNeighbours(TwoDIntVector solution) {
-	TwoDIntVector neighbour1 = generateTranslateEventToFreePosition(solution);
-	TwoDIntVector neighbour2 = generateSwapTwoEvents(solution);
-	TwoDIntVector neighbour3 = generateMatchingNeighbour(solution);
+	TwoDIntVector neighbour1 = generateTranslateEventToFreePosition(solution, true);
+	TwoDIntVector neighbour2 = generateTranslateEventToFreePosition(solution, false);
+	TwoDIntVector neighbour3 = generateSwapTwoEvents(solution, true);
+	TwoDIntVector neighbour4 = generateSwapTwoEvents(solution, false);
+	TwoDIntVector neighbour5 = generateMatchingNeighbour(solution);
 
-	TwoDIntVector* neighbours = new TwoDIntVector[3];
+	TwoDIntVector* neighbours = new TwoDIntVector[5];
 	neighbours[0] = neighbour1;
 	neighbours[1] = neighbour2;
 	neighbours[2] = neighbour3;
+	neighbours[3] = neighbour4;
+	neighbours[4] = neighbour5;
 	return neighbours;
 }
 
 // TrE: translate a random event to a free position of the timetable
-TwoDIntVector generateTranslateEventToFreePosition(TwoDIntVector solution) {
+// Random if we want to swap random rooms.
+TwoDIntVector generateTranslateEventToFreePosition(TwoDIntVector solution, bool random) {
 	int event = rand() % numEvents;
-	int room = rand() % numRooms;
+	int room;
+	if (random) {
+		room = rand() % numRooms;
+	} else {
+		int* place = getEventPlace(event);
+		room = place[0];
+	}
+	
 	int timeslot = rand() % NUMBEROFSLOTS;
+	int firstTimeslot = timeslot;
 	bool foundEmptyPosition = false;
 
 	// Iterate through the solution looking for free rooms from a random timeslot in a random room
@@ -268,10 +280,16 @@ TwoDIntVector generateTranslateEventToFreePosition(TwoDIntVector solution) {
 		timeslot++;
 		if (timeslot >= NUMBEROFSLOTS) {
 			timeslot = 0;
-			room++;
-			if (room >= numRooms) {
-				room = 0;
+			if (random) {
+				room++;
+				if (room >= numRooms) {
+					room = 0;
+				} 
 			}
+		}
+		if (!random && timeslot == firstTimeslot) {
+			// We must have looped, and not found any free timeslots in this room. 
+			return solution;
 		}
 		if (solution[room][timeslot] == -1) {
 			foundEmptyPosition = true;
@@ -291,13 +309,28 @@ TwoDIntVector generateTranslateEventToFreePosition(TwoDIntVector solution) {
 }
 
 // SwE: swaps two events by interchanging their position in the timetable
-TwoDIntVector generateSwapTwoEvents(TwoDIntVector solution) {
+// Random if we want to swap rooms as well.
+TwoDIntVector generateSwapTwoEvents(TwoDIntVector solution, bool random) {
 	bool distinctEvents = false;
 	int event1, event2;
 	// Generate two random events
 	while (!distinctEvents) {
 		event1 = rand() % numEvents;
-		event2 = rand() % numEvents;
+		if (random) {
+			event2 = rand() % numEvents;
+		}
+		else {
+			int room = getEventPlace(event1)[0];
+			bool foundEvent = false;
+			while (!foundEvent) {
+				int timeslot = rand() % NUMBEROFSLOTS;
+				event2 = solution[room][timeslot];
+				if (event2 != -1) {
+					foundEvent = true;
+				}
+			}
+			
+		}
 		if (event1 != event2) {
 			distinctEvents = true;
 		}
@@ -454,6 +487,7 @@ int selectRoomWithFewestSuitableEvents(int selectedEvent, int* numEvsThatCanGoIn
 
 int evaluateSolution(TwoDIntVector solution) {
 	int totalCost = 0;
+	int roomConstraintCost = 0;
 
 	// For each timeslot in each room
 
@@ -466,7 +500,6 @@ int evaluateSolution(TwoDIntVector solution) {
 			int event = solution[room][timeslot];
 			// If the timeslot has an event scheduled
 			if (event != -1) {
-				/*
 				// HARD CONSTRAINT 1) no student attends more than one event at the same time;
 				// Check if the event has conflict with another event in the same timeslot in another room
 				for (int otherRoom = 0; otherRoom < numRooms; otherRoom++)
@@ -480,7 +513,6 @@ int evaluateSolution(TwoDIntVector solution) {
 						}
 					}
 				}
-				*/
 				
 
 				// HARD CONSTRAINT 2) the room is big enough for all the attending students and satisfies all the features required by the event;
@@ -490,8 +522,8 @@ int evaluateSolution(TwoDIntVector solution) {
 					// If a room is too small for the size (number of people attending) of an event
 					// The eventRoom matrix has stored both of this information. 
 					totalCost++;
+					roomConstraintCost++;
 				}
-				/*
 				// HARD CONSTRAINT 3) only one event is put into each room in any timeslot;
 				// This one is impossible to violate given how the solution is represented
 
@@ -525,7 +557,6 @@ int evaluateSolution(TwoDIntVector solution) {
 						}
 					}
 				}
-				*/
 				
 			}
 		}
