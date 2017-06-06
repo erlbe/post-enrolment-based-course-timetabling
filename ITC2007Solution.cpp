@@ -191,8 +191,10 @@ int selectRoom(int event, int* numEventsForRoom, TwoDIntVector availableTimeslot
 	int minimumq1 = INT_MAX;
 	int c, q1;
 	IntVector min_vals;
+	IntVector suitedRooms;
 	for (c = 0; c<numRooms; c++) {
 		if (eventRoom[event][c]) {
+			suitedRooms.push_back(c);
 			//work out how many other events could go in this room (minus 1 because we are considering other events
 			q1 = numEventsForRoom[c] - 1;
 			if (q1<0) {
@@ -215,16 +217,30 @@ int selectRoom(int event, int* numEventsForRoom, TwoDIntVector availableTimeslot
 	}//end of for loop
 	 //We now have at least one event in a list called min_vals. If there are more than
 	 //one in the list then we need to choose one. We do this randomly
-
-	int r = rand() % min_vals.size();
-	int room = min_vals[r];
-	int numberOfAvailableSlotsInRoom = availableTimeslots[room].size();
-	if (numberOfAvailableSlotsInRoom > 0) {
-		return room;
+	while (suitedRooms.size() > 0) {
+		int r, room;
+		if (min_vals.size() > 0) {
+			r = rand() % min_vals.size();
+			room = min_vals[r];
+		}
+		else {
+			r = rand() % suitedRooms.size();
+			room = suitedRooms[r];
+		}
+		int numberOfAvailableSlotsInRoom = availableTimeslots[room].size();
+		if (numberOfAvailableSlotsInRoom > 0) {
+			return room;
+		}
+		else {
+			// No available slots in this room. Remove it from suitables and min_vals and try another.
+			if (min_vals.size() > 0) {
+				min_vals.erase(std::remove(min_vals.begin(), min_vals.end(), room), min_vals.end());
+			}
+			suitedRooms.erase(std::remove(suitedRooms.begin(), suitedRooms.end(), room), suitedRooms.end());
+		}
 	}
-	else {
-		return -1;
-	}
+	// If we reach this point none of the suited rooms are available. This means the event is left unplaced
+	return -1;
 	
 }
 
