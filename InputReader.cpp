@@ -28,6 +28,12 @@ void readInputFile(ifstream& inStream)
 
 	// Create eventRoom matrix which says if the room is suitable for a given event.
 	eventRoom = makeEventRoomMatrix();
+
+	// Create numSuitableRooms which says how many suitable rooms each event has
+	numSuitableRooms = makeNumSuitableRoomsArray();
+
+	// Create numSuitableEvents which says how many suitable events each room has
+	numSuitableEvents = makeNumSuitableEventsArray();
 }
 //---------------------------------------------------------------------------------------
 //                             READ INPUT FUNCTIONS
@@ -215,4 +221,28 @@ bool** makeEventRoomMatrix()
 	}
 	*/
 	return eventRoom;
+}
+
+int* makeNumSuitableRoomsArray() {
+	//we construct a 1D array that tells us how many rooms each event can go into
+	//in the empty timetable
+	int *totalNumRooms = new int[numEvents];
+	for (int r = 0; r<numEvents; r++) {
+		int total = 0;
+		for (int c = 0; c<numRooms; c++) if (eventRoom[r][c])total++;
+		totalNumRooms[r] = total;
+	}
+	return(totalNumRooms);
+}
+
+int* makeNumSuitableEventsArray() {
+	//we construct a 1D array that tells us how many events can go into each room
+	//in the empty timetable
+	int *totalNumEvents = new int[numRooms];
+	for (int r = 0; r<numRooms; r++) {
+		int total = 0;
+		for (int c = 0; c<numEvents; c++) if (eventRoom[c][r])total++;
+		totalNumEvents[r] = total;
+	}
+	return(totalNumEvents);
 }

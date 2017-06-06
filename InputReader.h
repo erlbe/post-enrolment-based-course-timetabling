@@ -14,5 +14,7 @@ int** makeBeforeMatrix(ifstream& inStream);
 bool** makeEventConflictMatrix();
 int* makeEventSizeMatrix();
 bool** makeEventRoomMatrix();
+int* makeNumSuitableRoomsArray();
+int* makeNumSuitableEventsArray();
 
 #endif

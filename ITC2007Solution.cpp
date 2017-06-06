@@ -2,7 +2,7 @@
 
 //	Arrays and variables used throughout the program
 int numEvents, numRooms, numFeatures, numStudents, NUMBEROFPLACES;
-int *roomSize, *eventSize;
+int *roomSize, *eventSize, *numSuitableRooms, *numSuitableEvents;
 int **before, **currentEventPlace;
 bool **attends, **roomFeatures, **eventFeatures, **eventAvail, **roomAvail, **event_conflict, **eventRoom;
 
@@ -27,7 +27,8 @@ int main(int argc, char**argv)
 
 	// The solution will be a 2D vector with the timetable for each room
 	TwoDIntVector theSolution;
-	theSolution = createRandomSolution();
+	// theSolution = createRandomSolution();
+	theSolution = generateFirstSolution();
 	printMatrix(theSolution, numRooms, NUMBEROFSLOTS);
 	int bestEvaluation = evaluateSolution(theSolution);
 	cout << "The evaluation of the random solution is: " << bestEvaluation << endl;
@@ -101,6 +102,130 @@ TwoDIntVector createRandomSolution() {
 	}
 	makeCurrentEventPlaceMatrix(theSolution);
 	return theSolution;
+}
+
+TwoDIntVector generateFirstSolution() {
+	//Make an empty the timetable
+	TwoDIntVector theSolution;
+	vector<vector<int> > temp(numRooms, vector<int>(NUMBEROFSLOTS, -1));
+	theSolution.swap(temp);
+
+	// Make copy of the numSuitableRooms which we can use in the generation of the first solution
+	int* numRoomsForEvent = new int[numEvents];
+	for (int r = 0; r<numEvents; r++) numRoomsForEvent[r] = numSuitableRooms[r];
+
+	// Make copy of the numSuitableEvents which we can use in the generation of the first solution
+	// FIXME: Needed?
+	int* numEventsForRoom = new int[numRooms];
+	for (int r = 0; r < numRooms; r++) numEventsForRoom[r] = numSuitableEvents[r];
+
+	// Create a matrix with a vector of available timeslots in each room. At the beginning all are available.
+	TwoDIntVector availableTimeslots;
+	vector<vector<int> > tempMatrix(numRooms, vector<int>(NUMBEROFSLOTS, -1));
+	availableTimeslots.swap(tempMatrix);
+	for (int room = 0; room < numRooms; room++) {
+		for (int timeslot = 0; timeslot < NUMBEROFSLOTS; timeslot++){
+			availableTimeslots[room][timeslot] = timeslot;
+		}
+	}
+
+	int numEventsToBePlaced = numEvents;
+
+	IntVector unplacedEvents;
+	unplacedEvents.clear();
+
+	while (numEventsToBePlaced > 0) {
+		int event = selectEvent(numRoomsForEvent);
+		int room = selectRoom(event, numEventsForRoom, availableTimeslots);
+		if (room != -1) {
+			// Select a random timeslot from one of the available ones for this room.
+			int index = rand() % availableTimeslots[room].size();
+			int timeslot = availableTimeslots[room][index];
+
+			// Remove the timeslot from the array of available timeslots for this room
+			availableTimeslots[room].erase(availableTimeslots[room].begin() + index);
+
+			theSolution[room][timeslot] = event;
+		}
+		else {
+			cout << event << "Was left unplaced because of finding no fitting room" << endl;
+			unplacedEvents.push_back(event);
+		}
+		numEventsToBePlaced--;
+	}
+	
+	makeCurrentEventPlaceMatrix(theSolution);
+	return theSolution;
+}
+
+int selectEvent(int* numRoomsForEvent) {
+	// Select one of the events that has fewest rooms that it can go into. If there are multiple, select one at random.
+
+	int minimum = INT_MAX;
+	int i;
+	IntVector min_vals;
+	for (i = 0; i<numEvents; i++) {
+		if (numRoomsForEvent[i] != -1 && numRoomsForEvent[i] != 0) {
+			if (numRoomsForEvent[i] < minimum) {
+				min_vals.clear();
+				min_vals.push_back(i);
+				minimum = numRoomsForEvent[i];
+			}
+			else if (numRoomsForEvent[i] == minimum) {
+				min_vals.push_back(i);
+			}
+			else; //do nothing
+		}
+	}
+	int r = rand() % min_vals.size();
+	int event = min_vals[r];
+
+	// Update the numRoomsForEvent array
+	numRoomsForEvent[event] = -1;
+
+	return event;
+
+}
+
+int selectRoom(int event, int* numEventsForRoom, TwoDIntVector availableTimeslots) {
+	int minimumq1 = INT_MAX;
+	int c, q1;
+	IntVector min_vals;
+	for (c = 0; c<numRooms; c++) {
+		if (eventRoom[event][c]) {
+			//work out how many other events could go in this room (minus 1 because we are considering other events
+			q1 = numEventsForRoom[c] - 1;
+			if (q1<0) {
+				cout << "Error in select_place " << endl;
+				exit(1);
+			}
+
+			//IF THIS VALUE IS THE LOWEST SO FAR, OR EQUAL TO THE LOWEST, WE STICK IT IN A LIST.
+			if (q1 < minimumq1) {
+				min_vals.clear();
+				min_vals.push_back(c);
+				minimumq1 = q1;
+			}
+			else if (q1 == minimumq1) {
+				min_vals.push_back(c);
+			}
+			else; //do nothing
+
+		}//end of if
+	}//end of for loop
+	 //We now have at least one event in a list called min_vals. If there are more than
+	 //one in the list then we need to choose one. We do this randomly
+
+	int r = rand() % min_vals.size();
+	int room = min_vals[r];
+	int numberOfAvailableSlotsInRoom = availableTimeslots[room].size();
+	if (numberOfAvailableSlotsInRoom > 0) {
+		return room;
+	}
+	else {
+		return -1;
+	}
+	
 }
 
 TwoDIntVector* generateNeighbours(TwoDIntVector solution) {
