@@ -9,6 +9,7 @@
 #include <random>
 #include <ctime>
 #include <algorithm>
+#include <time.h>
 #pragma once
 
 using namespace std;
@@ -35,6 +36,7 @@ int selectRoomWithFewestSuitableEvents(int selectedEvent, int* numEvsThatCanGoIn
 void makeCurrentEventPlaceMatrix(TwoDIntVector);
 int* getEventPlace(int event);
 
+TwoDIntVector localSearch(clock_t);
 TwoDIntVector createRandomSolution();
 TwoDIntVector generateFirstSolution();
 int selectEvent(int* numRoomsForEvent);

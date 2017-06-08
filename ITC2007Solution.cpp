@@ -11,30 +11,63 @@ int main(int argc, char**argv)
 {
 	char fileName[40], slnFileName[40];
 	int i;
+	clock_t timeLimit = 15;
 	ifstream inStream;
 
+	// Read the input and arguments
 	for (i = 1; i < argc; i++)
 	{
-		strcpy(fileName, argv[i]);
-		strcat(fileName, ".tim");
-		strcpy(slnFileName, argv[i]);
-		inStream.open(fileName);
-		readInputFile(inStream);
-		inStream.close();
+		if (strcmp("-t", argv[i]) == 0) {
+			timeLimit = atoi(argv[++i]);
+		}
+		else {
+			strcpy(fileName, argv[i]);
+			strcat(fileName, ".tim");
+			strcpy(slnFileName, argv[i]);
+			inStream.open(fileName);
+			readInputFile(inStream);
+			inStream.close();
+		}
+		
 	}
 
 	// Seed the random function
 	srand(time(NULL));
 
+	clock_t clockStart = clock();
+	clock_t clockFinish = clockStart + int(timeLimit*CLOCKS_PER_SEC);
+	TwoDIntVector finalSolution = localSearch(clockFinish);
+	double duration = (double)(clock() - clockStart) / CLOCKS_PER_SEC;
+
+	cout << "The final solution looks like this:" << endl;
+	printMatrix(finalSolution, numRooms, NUMBEROFSLOTS);
+	cout << "The evaluation of the final solution is: " << evaluateSolution(finalSolution) << endl;
+
+	if (duration < timeLimit) {
+		cout << "Program ended. " << duration << " seconds to of CPU time to complete\n";
+	}
+	else {
+		cout << "Program ended. " << timeLimit << " seconds to of CPU time to complete\n";
+	}
+
+	// Create the file to be checked by the official solution validator
+	outputSlnAnswerFile(finalSolution, slnFileName);
+    return 0;
+}
+
+
+//---------------------------------------------------------------------------------------
+//                             ALGORITHM FUNCTIONS
+//---------------------------------------------------------------------------------------
+
+TwoDIntVector localSearch(clock_t clockFinish) {
 	// The solution will be a 2D vector with the timetable for each room
 	TwoDIntVector theSolution;
 	// theSolution = createRandomSolution();
 	theSolution = generateFirstSolution();
-	printMatrix(theSolution, numRooms, NUMBEROFSLOTS);
 	int bestEvaluation = evaluateSolution(theSolution);
-	cout << "The evaluation of the random solution is: " << bestEvaluation << endl;
-
-	while (bestEvaluation > 20) {
+	cout << "The evaluation of the initial candidate solution is: " << bestEvaluation << endl;
+	while (clockFinish > clock() && bestEvaluation > 0) {
 		TwoDIntVector* neighbours = generateNeighbours(theSolution);
 		for (int i = 0; i < 5; i++)
 		{
@@ -44,21 +77,12 @@ int main(int argc, char**argv)
 				bestEvaluation = neighbourEvaluation;
 				theSolution = currentNeighbour;
 				makeCurrentEventPlaceMatrix(theSolution);
-				cout << "The evaluation of the current solution is: " << bestEvaluation << endl;
+				//cout << "The evaluation of the current solution is: " << bestEvaluation << endl;
 			}
 		}
 	}
-	cout << "The evaluation of the current solution is: " << bestEvaluation << endl;
-	printMatrix(theSolution, numRooms, NUMBEROFSLOTS);
-	// Create the file to be checked by the official solution validator
-	outputSlnAnswerFile(theSolution, slnFileName);
-    return 0;
+	return theSolution;
 }
-
-
-//---------------------------------------------------------------------------------------
-//                             ALGORITHM FUNCTIONS
-//---------------------------------------------------------------------------------------
 
 // THIS METHOD IS NOT USED. TOO BAD...
 TwoDIntVector createRandomSolution() {
