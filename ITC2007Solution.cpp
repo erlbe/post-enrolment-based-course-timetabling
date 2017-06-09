@@ -13,7 +13,7 @@ int main(int argc, char**argv)
 	int i;
 	clock_t timeLimit = 15;
 	ifstream inStream;
-
+	/*
 	// Read the input and arguments
 	for (i = 1; i < argc; i++)
 	{
@@ -30,28 +30,47 @@ int main(int argc, char**argv)
 		}
 		
 	}
+	*/
+	
 
 	// Seed the random function
 	srand(time(NULL));
 
-	clock_t clockStart = clock();
-	clock_t clockFinish = clockStart + int(timeLimit*CLOCKS_PER_SEC);
-	TwoDIntVector finalSolution = localSearch(clockFinish);
-	double duration = (double)(clock() - clockStart) / CLOCKS_PER_SEC;
+	for (int i = 1; i < 25; i++)
+	{
+		string currentFile = "itc2007/comp-2007-2-" + std::to_string(i) + ".tim";
+		strcpy(slnFileName, ("itc2007/comp-2007-2-" + std::to_string(i)).c_str());
+		strcpy(fileName, currentFile.c_str());
+		//cout << fileName;
+		inStream.open(fileName);
+		readInputFile(inStream);
+		inStream.close();
 
-	cout << "The final solution looks like this:" << endl;
-	printMatrix(finalSolution, numRooms, NUMBEROFSLOTS);
-	cout << "The evaluation of the final solution is: " << evaluateSolution(finalSolution) << endl;
+		clock_t clockStart = clock();
+		clock_t clockFinish = clockStart + int(timeLimit*CLOCKS_PER_SEC);
+		TwoDIntVector finalSolution = localSearch(clockFinish);
+		double duration = (double)(clock() - clockStart) / CLOCKS_PER_SEC;
 
-	if (duration < timeLimit) {
-		cout << "Program ended. " << duration << " seconds to of CPU time to complete\n";
+		//cout << "Instance: " << i << endl;
+		//cout << "The evaluation of the final solution is: " << evaluateSolution(finalSolution) << endl;
+		cout << evaluateSolution(finalSolution) << endl;
+		/*
+		if (duration < timeLimit) {
+			cout << "Program ended. " << duration << " seconds to of CPU time to complete\n";
+		}
+		else {
+			cout << "Program ended. " << timeLimit << " seconds to of CPU time to complete\n";
+		}
+		*/
+		//cout << endl;
+		
+		
+
+		// Create the file to be checked by the official solution validator
+		outputSlnAnswerFile(finalSolution, slnFileName);
 	}
-	else {
-		cout << "Program ended. " << timeLimit << " seconds to of CPU time to complete\n";
-	}
 
-	// Create the file to be checked by the official solution validator
-	outputSlnAnswerFile(finalSolution, slnFileName);
+	
     return 0;
 }
 
@@ -66,7 +85,8 @@ TwoDIntVector localSearch(clock_t clockFinish) {
 	// theSolution = createRandomSolution();
 	theSolution = generateFirstSolution();
 	int bestEvaluation = evaluateSolution(theSolution);
-	cout << "The evaluation of the initial candidate solution is: " << bestEvaluation << endl;
+	//cout << "The evaluation of the initial candidate solution is: " << bestEvaluation << endl;
+	cout << bestEvaluation <<  " ";
 	while (clockFinish > clock() && bestEvaluation > 0) {
 		TwoDIntVector* neighbours = generateNeighbours(theSolution);
 		for (int i = 0; i < 5; i++)
@@ -171,7 +191,7 @@ TwoDIntVector generateFirstSolution() {
 			theSolution[room][timeslot] = event;
 		}
 		else {
-			cout << event << "Was left unplaced because of finding no fitting room" << endl;
+			// cout << event << "Was left unplaced because of finding no fitting room" << endl;
 			unplacedEvents.push_back(event);
 		}
 		numEventsToBePlaced--;

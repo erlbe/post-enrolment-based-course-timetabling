@@ -1,7 +1,7 @@
 #ifndef ITC2007SOLUTION_H
 #define ITC2007SOLUTION_H
 
-#include "stdafx.h"
+//#include "stdafx.h"
 #include "string.h"
 #include <iostream>  
 #include <fstream>
@@ -10,6 +10,7 @@
 #include <ctime>
 #include <algorithm>
 #include <time.h>
+#include <string>
 #pragma once
 
 using namespace std;
