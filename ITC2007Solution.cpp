@@ -519,7 +519,7 @@ int selectRoomWithFewestSuitableEvents(int selectedEvent, int* numEvsThatCanGoIn
 	}
 }
 
-// Timeslot Matching. Try to re-arrange the timeslots in a given room better.
+// TMa: Timeslot Matching. Try to re-arrange the timeslots in a given room better.
 // TODO: Handle before/after also.
 TwoDIntVector generateTimeslotMatchingNeighbour(TwoDIntVector solution, int room) {
 	IntVector eventsToBeReScheduled;
@@ -728,11 +728,14 @@ int evaluateSolution(TwoDIntVector solution) {
 			}
 		}
 	}
+	/*
 	cout << "Hard constraint 1 has the following cost: " << constraint1 << endl;
 	cout << "Hard constraint 2 has the following cost: " << constraint2 << endl;
 	cout << "Hard constraint 3 has the following cost: " << constraint3 << endl;
 	cout << "Hard constraint 4 has the following cost: " << constraint4 << endl;
 	cout << "Hard constraint 5 has the following cost: " << constraint5 << endl << endl;
+	*/
+	
 
 	return totalCost;
 }

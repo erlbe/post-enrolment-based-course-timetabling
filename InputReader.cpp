@@ -174,8 +174,6 @@ int* makeTotalNumConflictArray()
 	for (int r = 0; r<numEvents; r++) {
 		int total = 0;
 		for (int c = 0; c<numEvents; c++) if (event_conflict[r][c])total++;
-		// FIXME: Uncomment this?
-		//for (int c = 0; c<NUMBEROFSLOTS; c++) if (!eventAvail[r][c])total++;
 
 		totalNumConflict[r] = total - 1;
 	}
@@ -187,7 +185,7 @@ int* makeTotalNumAvailableSlotsArray()
 	int* totalNumAvailable = new int[numEvents];
 	for (int r = 0; r<numEvents; r++) {
 		int total = 0;
-		for (int c = 0; c<NUMBEROFSLOTS; c++) if (!eventAvail[r][c])total++;
+		for (int c = 0; c<NUMBEROFSLOTS; c++) if (eventAvail[r][c])total++;
 
 		totalNumAvailable[r] = total - 1;
 	}
