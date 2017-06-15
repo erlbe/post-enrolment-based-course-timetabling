@@ -5,7 +5,7 @@ int numEvents, numRooms, numFeatures, numStudents, NUMBEROFPLACES;
 int *roomSize, *eventSize, *numSuitableRooms, *numSuitableEvents, *totalNumConflict, *totalNumAvailableSlots;
 int **before, **currentEventPlace;
 bool **attends, **roomFeatures, **eventFeatures, **eventAvail, **roomAvail, **event_conflict, **eventRoom;
-IntVector unplacedEvents;
+IntVector unplacedEvents, tabuList;
 
 int main(int argc, char**argv)
 {
@@ -73,11 +73,20 @@ TwoDIntVector localSearch(clock_t clockFinish) {
 		{
 			TwoDIntVector currentNeighbour = neighbours[i];
 			int neighbourEvaluation = evaluateSolution(currentNeighbour);
-			if (neighbourEvaluation <= bestEvaluation) {
+			if (neighbourEvaluation < bestEvaluation) {
 				bestEvaluation = neighbourEvaluation;
 				theSolution = currentNeighbour;
 				makeCurrentEventPlaceMatrix(theSolution);
 				//cout << "The evaluation of the current solution is: " << bestEvaluation << endl;
+
+				// Add the room to the tabu-list
+				if (i >= 5) {
+					tabuList.push_back(i - 5);
+					// If tabulist too big, remove one
+					if (tabuList.size() > MAXTABULISTSIZE) {
+						tabuList.erase(tabuList.begin());
+					}
+				}
 			}
 		}
 	}
@@ -641,7 +650,7 @@ int chooseEventWithMostConflicts(IntVector events) {
 
 int evaluateSolution(TwoDIntVector solution) {
 	int totalCost = 0;
-	int roomConstraintCost = 0;
+	int constraint1 = 0, constraint2 = 0, constraint3 = 0, constraint4 = 0, constraint5 = 0;
 
 	// For each timeslot in each room
 
@@ -664,6 +673,7 @@ int evaluateSolution(TwoDIntVector solution) {
 						// Check the event_conflict matrix
 						if (event_conflict[event][otherEvent]) {
 							totalCost++;
+							constraint1++;
 						}
 					}
 				}
@@ -676,7 +686,7 @@ int evaluateSolution(TwoDIntVector solution) {
 					// If a room is too small for the size (number of people attending) of an event
 					// The eventRoom matrix has stored both of this information. 
 					totalCost++;
-					roomConstraintCost++;
+					constraint2++;
 				}
 				// HARD CONSTRAINT 3) only one event is put into each room in any timeslot;
 				// This one is impossible to violate given how the solution is represented
@@ -684,8 +694,9 @@ int evaluateSolution(TwoDIntVector solution) {
 				// HARD CONSTRAINT 4) events are only assigned to timeslots that are pre-defined as available for those events;
 				if (!eventAvail[event][timeslot]) {
 					totalCost++;
+					constraint4++;
 				}
-
+			
 				// HARD CONSTRAINT 5) where specified,  events are scheduled to occur in the correct order in the week;
 				int* beforeEvent = before[event];
 				int startTimeslot, stopTimeslot, shouldBeBefore;
@@ -708,13 +719,21 @@ int evaluateSolution(TwoDIntVector solution) {
 						int otherEvent = solution[otherRoom][otherTimeslot];
 						if (beforeEvent[otherEvent] == shouldBeBefore) {
 							totalCost++;
+							constraint5++;
 						}
 					}
 				}
 				
+				
 			}
 		}
 	}
+	cout << "Hard constraint 1 has the following cost: " << constraint1 << endl;
+	cout << "Hard constraint 2 has the following cost: " << constraint2 << endl;
+	cout << "Hard constraint 3 has the following cost: " << constraint3 << endl;
+	cout << "Hard constraint 4 has the following cost: " << constraint4 << endl;
+	cout << "Hard constraint 5 has the following cost: " << constraint5 << endl << endl;
+
 	return totalCost;
 }
 

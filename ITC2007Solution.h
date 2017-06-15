@@ -19,6 +19,7 @@ const int NUMBEROFSLOTS = 45;
 const int NUMDAYS = 5;
 const int SLOTSPERDAY = 9;
 const int LASTSLOTINDEX = SLOTSPERDAY - 1;
+const int MAXTABULISTSIZE = 3;
 
 // Definitions to use in the algorithm
 typedef std::vector<int> IntVector;
