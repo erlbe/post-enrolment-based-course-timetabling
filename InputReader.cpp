@@ -23,6 +23,11 @@ void readInputFile(ifstream& inStream)
 	// Create confilct_event matrix with events that have one or more students that take another event 
 	event_conflict = makeEventConflictMatrix();
 
+	// Create totalNumConflict array which tells us how many conflicts each event has. Both with other events, and unavailable timeslots.
+	totalNumConflict = makeTotalNumConflictArray();
+
+	totalNumAvailableSlots = makeTotalNumAvailableSlotsArray();
+
 	// Create eventSize matrix to decide the number of students attending each event. Used to make sure the rooms are big enough.
 	eventSize = makeEventSizeMatrix();
 
@@ -158,6 +163,35 @@ bool** makeEventConflictMatrix()
 		}
 	}
 	return conflict;
+}
+
+//-------------------------------------------------------------------------------------
+int* makeTotalNumConflictArray()
+{
+	//we construct a 1D array that tells us how many other events
+	//each event conflicts with
+	int* totalNumConflict = new int[numEvents];
+	for (int r = 0; r<numEvents; r++) {
+		int total = 0;
+		for (int c = 0; c<numEvents; c++) if (event_conflict[r][c])total++;
+		// FIXME: Uncomment this?
+		//for (int c = 0; c<NUMBEROFSLOTS; c++) if (!eventAvail[r][c])total++;
+
+		totalNumConflict[r] = total - 1;
+	}
+	return totalNumConflict;
+}
+
+int* makeTotalNumAvailableSlotsArray()
+{
+	int* totalNumAvailable = new int[numEvents];
+	for (int r = 0; r<numEvents; r++) {
+		int total = 0;
+		for (int c = 0; c<NUMBEROFSLOTS; c++) if (!eventAvail[r][c])total++;
+
+		totalNumAvailable[r] = total - 1;
+	}
+	return totalNumAvailable;
 }
 
 int* makeEventSizeMatrix() {

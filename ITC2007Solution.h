@@ -31,6 +31,9 @@ TwoDIntVector* generateNeighbours(TwoDIntVector);
 TwoDIntVector generateTranslateEventToFreePosition(TwoDIntVector, bool);
 TwoDIntVector generateSwapTwoEvents(TwoDIntVector, bool);
 TwoDIntVector generateMatchingNeighbour(TwoDIntVector);
+TwoDIntVector generateTimeslotMatchingNeighbour(TwoDIntVector solution, int room);
+IntVector chooseEventsWithFewestAvailable(IntVector events);
+int chooseEventWithMostConflicts(IntVector events);
 int selectEventWithFewestSuitableRooms(int timeslot, int* numRoomsThatCanHaveEvs, int*);
 int selectRoomWithFewestSuitableEvents(int selectedEvent, int* numEvsThatCanGoInRoom, int*);
 void makeCurrentEventPlaceMatrix(TwoDIntVector);
@@ -51,7 +54,7 @@ void printMatrix(TwoDIntVector matrix, int rows, int cols);
 
 //	Arrays and variables used throughout the program
 extern int numEvents, numRooms, numFeatures, numStudents, NUMBEROFPLACES;
-extern int *roomSize, *eventSize, *numSuitableRooms, *numSuitableEvents;
+extern int *roomSize, *eventSize, *numSuitableRooms, *numSuitableEvents, *totalNumConflict, *totalNumAvailableSlots;
 extern int **before, **currentEventPlace;
 extern bool **attends, **roomFeatures, **eventFeatures, **eventAvail, **roomAvail, **event_conflict, **eventRoom;
 

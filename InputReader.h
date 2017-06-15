@@ -12,9 +12,11 @@ bool** makeEventAvail(ifstream& inStream);
 bool** makeRoomAvail();
 int** makeBeforeMatrix(ifstream& inStream);
 bool** makeEventConflictMatrix();
+int* makeTotalNumConflictArray();
 int* makeEventSizeMatrix();
 bool** makeEventRoomMatrix();
 int* makeNumSuitableRoomsArray();
 int* makeNumSuitableEventsArray();
+int* makeTotalNumAvailableSlotsArray();
 
 #endif

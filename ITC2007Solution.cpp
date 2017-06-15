@@ -2,7 +2,7 @@
 
 //	Arrays and variables used throughout the program
 int numEvents, numRooms, numFeatures, numStudents, NUMBEROFPLACES;
-int *roomSize, *eventSize, *numSuitableRooms, *numSuitableEvents;
+int *roomSize, *eventSize, *numSuitableRooms, *numSuitableEvents, *totalNumConflict, *totalNumAvailableSlots;
 int **before, **currentEventPlace;
 bool **attends, **roomFeatures, **eventFeatures, **eventAvail, **roomAvail, **event_conflict, **eventRoom;
 IntVector unplacedEvents;
@@ -69,7 +69,7 @@ TwoDIntVector localSearch(clock_t clockFinish) {
 	cout << "The evaluation of the initial candidate solution is: " << bestEvaluation << endl;
 	while (clockFinish > clock() && bestEvaluation > 0) {
 		TwoDIntVector* neighbours = generateNeighbours(theSolution);
-		for (int i = 0; i < 5; i++)
+		for (int i = 0; i < 5 + numRooms; i++)
 		{
 			TwoDIntVector currentNeighbour = neighbours[i];
 			int neighbourEvaluation = evaluateSolution(currentNeighbour);
@@ -274,12 +274,16 @@ TwoDIntVector* generateNeighbours(TwoDIntVector solution) {
 	TwoDIntVector neighbour4 = generateSwapTwoEvents(solution, false);
 	TwoDIntVector neighbour5 = generateMatchingNeighbour(solution);
 
-	TwoDIntVector* neighbours = new TwoDIntVector[5];
+	TwoDIntVector* neighbours = new TwoDIntVector[5+numRooms];
 	neighbours[0] = neighbour1;
 	neighbours[1] = neighbour2;
 	neighbours[2] = neighbour3;
 	neighbours[3] = neighbour4;
 	neighbours[4] = neighbour5;
+	for (int i = 0; i < numRooms; i++)
+	{
+		neighbours[i+5] = generateTimeslotMatchingNeighbour(solution, i);
+	}
 	return neighbours;
 }
 
@@ -504,8 +508,134 @@ int selectRoomWithFewestSuitableEvents(int selectedEvent, int* numEvsThatCanGoIn
 		int r = rand() % minList.size();
 			return minList[r];
 	}
+}
 
-	
+// Timeslot Matching. Try to re-arrange the timeslots in a given room better.
+// TODO: Handle before/after also.
+TwoDIntVector generateTimeslotMatchingNeighbour(TwoDIntVector solution, int room) {
+	IntVector eventsToBeReScheduled;
+	// Copy the solution to be tinkered with.
+	TwoDIntVector neighbourSolution = solution;
+
+	// Go through the timeslots in the room and clear the solution, and append all the events to the list of events to be scheduled.
+	for (int timeslot = 0; timeslot < NUMBEROFSLOTS; timeslot++){
+		int event = neighbourSolution[room][timeslot];
+		if (event != -1) {
+			// Add event to the ones to be scheduled.
+			eventsToBeReScheduled.push_back(event);
+			// Make timeslot available
+			neighbourSolution[room][timeslot] = -1;
+		}
+	}
+	while (eventsToBeReScheduled.size() > 0) {
+		// Choose the event with fewest available timeslots
+		IntVector events = chooseEventsWithFewestAvailable(eventsToBeReScheduled);
+
+		// Choose the event with most conflicts
+		int event = chooseEventWithMostConflicts(events);
+		// Delete the event from the list of events to be scheduled
+		eventsToBeReScheduled.erase(std::remove(eventsToBeReScheduled.begin(), eventsToBeReScheduled.end(), event), eventsToBeReScheduled.end());
+
+		// Get the suited timeslots
+		IntVector suitedTimeslots;
+		for (int timeslot = 0; timeslot < NUMBEROFSLOTS; timeslot++) {
+			if (eventAvail[event][timeslot]) {
+				suitedTimeslots.push_back(timeslot);
+			}
+		}
+		bool foundTimeslot = false;
+		IntVector suitedTimeSlotsCopy = suitedTimeslots;
+		while (suitedTimeSlotsCopy.size() > 0 && !foundTimeslot) {
+			// Select a timeslot
+			int r = rand() % suitedTimeSlotsCopy.size();
+			int timeslot = suitedTimeSlotsCopy[r];
+
+			// Check if there is a conflict with the other events in this timeslot in the other rooms.
+			bool conflict = false;
+			for (int room = 0; room < numRooms; room++) {
+				int otherEvent = neighbourSolution[room][timeslot];
+				if (otherEvent != -1) {
+					if (event_conflict[event][otherEvent]) {
+						conflict = true;
+					}
+				}
+			}
+			if (!conflict && neighbourSolution[room][timeslot] == -1) {
+				// If no conflict, place the event in the timeslot.
+				neighbourSolution[room][timeslot] = event;
+				foundTimeslot = true;
+			}
+			else {
+				// If conflict or taken, remove the timeslot from the ones we consider
+				suitedTimeSlotsCopy.erase(std::remove(suitedTimeSlotsCopy.begin(), suitedTimeSlotsCopy.end(), timeslot), suitedTimeSlotsCopy.end());
+			}
+		}
+		// If all of the suited timeslots are occupied by other events this event is in conflict with
+		if (suitedTimeSlotsCopy.size() == 0) {
+			// Choose one of the suitable timeslots at random, and hope the conflict will be resolved later.
+			while (suitedTimeslots.size() > 0 && !foundTimeslot) {
+				int r = rand() % suitedTimeslots.size();
+				int timeslot = suitedTimeslots[r];
+				if (neighbourSolution[room][timeslot] == -1) {
+					neighbourSolution[room][timeslot] = event;
+					foundTimeslot = true;
+				}
+				else {
+					suitedTimeslots.erase(std::remove(suitedTimeslots.begin(), suitedTimeslots.end(), timeslot), suitedTimeslots.end());
+				}
+			}
+			// If all of the suited timeslots are taken, just place the event in a random one that isn't taken.
+			if (suitedTimeslots.size() == 0) {
+				while (!foundTimeslot) {
+					int timeslot = rand() % NUMBEROFSLOTS;
+					if (neighbourSolution[room][timeslot] == -1) {
+						neighbourSolution[room][timeslot] = event;
+						foundTimeslot = true;
+					}
+				}
+			}
+			if (!foundTimeslot) {
+				cout << "Didn't find timeslot for event " << event << endl;
+		}
+		}
+	}
+	return neighbourSolution;
+}
+IntVector chooseEventsWithFewestAvailable(IntVector events) {
+	int minimum = NUMBEROFSLOTS + 1;
+	IntVector min_vals;
+	for (int i = 0; i < events.size(); i++)	{
+		int event = events[i];
+		if (totalNumAvailableSlots[event] < minimum) {
+			min_vals.clear();
+			min_vals.push_back(event);
+			minimum = totalNumAvailableSlots[event];
+		}
+		else if (totalNumAvailableSlots[event] == minimum){
+			min_vals.push_back(event);
+		}
+	}
+	return min_vals;
+}
+
+int chooseEventWithMostConflicts(IntVector events) {
+	int maxValue = -1;
+	IntVector maxList;
+	// Select the event(s) with most conflicts
+	for (int i = 0; i < events.size(); i++) {
+		int event = events[i];
+		if (totalNumConflict[event] > maxValue) {
+			maxList.clear();
+			maxList.push_back(event);
+			maxValue = totalNumConflict[event];
+		}
+		else if (totalNumConflict[event] == maxValue) {
+			maxList.push_back(event);
+		}
+	}
+	int r = rand() % maxList.size();
+	int event = maxList[r];
+	return event;
 }
 
 
