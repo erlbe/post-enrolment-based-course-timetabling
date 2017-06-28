@@ -32,6 +32,7 @@ int main(int argc, char**argv)
 	}
 
 	// Seed the random function
+	//srand(time(NULL));
 	srand(time(NULL));
 
 	clock_t clockStart = clock();
@@ -565,6 +566,7 @@ TwoDIntVector generateTimeslotMatchingNeighbour(TwoDIntVector solution, int room
 				int otherEvent = neighbourSolution[room][timeslot];
 				if (otherEvent != -1) {
 					if (event_conflict[event][otherEvent]) {
+						cout << "Conflict between event " << event << " and " << otherEvent << endl;
 						conflict = true;
 					}
 				}
