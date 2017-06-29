@@ -25,6 +25,7 @@ int main(int argc, char**argv)
 			strcat(fileName, ".tim");
 			strcpy(slnFileName, argv[i]);
 			inStream.open(fileName);
+			cout << "Reading file " << fileName << endl;
 			readInputFile(inStream);
 			inStream.close();
 		}
@@ -40,15 +41,16 @@ int main(int argc, char**argv)
 	TwoDIntVector finalSolution = localSearch(clockFinish);
 	double duration = (double)(clock() - clockStart) / CLOCKS_PER_SEC;
 
-	cout << "The final solution looks like this:" << endl;
-	printMatrix(finalSolution, numRooms, NUMBEROFSLOTS);
-	cout << "The evaluation of the final solution is: " << evaluateSolution(finalSolution) << endl;
+	//cout << "The final solution looks like this:" << endl;
+	//printMatrix(finalSolution, numRooms, NUMBEROFSLOTS);
 
 	if (duration < timeLimit) {
 		cout << "Program ended. " << duration << " seconds to of CPU time to complete\n";
 	}
 	else {
-		cout << "Program ended. " << timeLimit << " seconds to of CPU time to complete\n";
+		cout << "Timelimit of " << timeLimit << " seconds of CPU time reached. No feasible solution was found" << endl;
+		cout << "The evaluation of the final solution is: " << evaluateSolution(finalSolution) << endl;
+
 	}
 
 	// Create the file to be checked by the official solution validator
@@ -62,6 +64,7 @@ int main(int argc, char**argv)
 //---------------------------------------------------------------------------------------
 
 TwoDIntVector localSearch(clock_t clockFinish) {
+	cout << "Beginning Local Search to find feasible solution..." << endl;
 	// The solution will be a 2D vector with the timetable for each room
 	TwoDIntVector theSolution;
 	// theSolution = createRandomSolution();
@@ -566,7 +569,6 @@ TwoDIntVector generateTimeslotMatchingNeighbour(TwoDIntVector solution, int room
 				int otherEvent = neighbourSolution[room][timeslot];
 				if (otherEvent != -1) {
 					if (event_conflict[event][otherEvent]) {
-						cout << "Conflict between event " << event << " and " << otherEvent << endl;
 						conflict = true;
 					}
 				}
